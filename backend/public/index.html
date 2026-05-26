@@ -1,73 +1,78 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>UNO Browser Game</title>
-    <link rel="stylesheet" href="styles.css" />
-  </head>
-  <body>
-    <div class="container">
-      <header>
-        <h1>🃏 UNO</h1>
-        <div class="status" id="status">Connecting...</div>
-      </header>
 
-      <main id="game-container" class="hidden">
-        <!-- Opponent Area -->
-        <div class="opponent">
-          <div class="opponent-name">
-            <span id="opponent-id">Opponent</span>
-          </div>
-          <div class="opponent-cards">
-            <span id="opponent-card-count">0</span> cards
-          </div>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UNO Browser Game</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <div class="container">
+    <!-- Replace your current header -->
+
+    <header>
+      <h1>UNO</h1>
+      <div class="status" id="status">Connecting...</div>
+    </header>
+
+    <main id="game-container" class="hidden">
+      <!-- Opponent Area -->
+      <div class="opponent">
+        <div class="opponent-name">
+          <span id="opponent-id">Opponent</span>
         </div>
-
-        <!-- Game Center -->
-        <div class="game-center">
-          <!-- Current Turn Indicator -->
-          <div class="turn-indicator" id="turn-indicator">
-            <span id="turn-text">Waiting for game start...</span>
-          </div>
-
-          <!-- Discard Pile -->
-          <div class="discard-pile">
-            <p class="label">Current Card</p>
-            <div class="card" id="top-card">
-              <span class="card-empty">Waiting...</span>
-            </div>
-          </div>
-
-          <!-- Draw Button -->
-          <div class="draw-area">
-            <button id="draw-button" class="btn-draw" disabled>
-              Draw Card
-            </button>
-          </div>
-        </div>
-
-        <!-- Player Hand -->
-        <div class="hand">
-          <p class="label">Your Hand</p>
-          <div class="cards-container" id="hand-container">
-            <!-- Cards rendered by JavaScript -->
-          </div>
-        </div>
-
-        <!-- Messages -->
-        <div class="messages" id="messages-container"></div>
-      </main>
-
-      <!-- Game Over Screen -->
-      <div id="game-over-screen" class="hidden">
-        <div class="modal">
-          <h2 id="game-over-text">Game Over</h2>
-          <p id="winner-text"></p>
+        <div class="opponent-cards">
+          <span id="opponent-card-count">0</span> cards
         </div>
       </div>
-    </div>
 
-    <script src="app.js"></script>
-  </body>
+      <!-- Game Center -->
+      <div class="game-center">
+        <!-- Current Turn Indicator -->
+        <div class="turn-indicator" id="turn-indicator">
+          <span id="turn-text">Waiting for game start...</span>
+        </div>
+
+        <!-- Discard Pile -->
+        <div class="discard-pile">
+          <p class="label">Current Card</p>
+          <div class="card" id="top-card">
+            <span class="card-empty">Waiting...</span>
+          </div>
+        </div>
+
+        <!-- Draw Button -->
+        <div class="draw-area">
+          <button id="draw-button" class="btn-draw" disabled>
+            Draw Card
+          </button>
+        </div>
+      </div>
+
+      <!-- Player Hand -->
+      <div class="hand">
+        <p class="label">Your Hand</p>
+        <div class="cards-container" id="hand-container">
+          <!-- Cards rendered by JavaScript -->
+        </div>
+      </div>
+
+      <!-- Messages -->
+      <div class="messages" id="messages-container"></div>
+    </main>
+
+    <!-- Game Over Screen -->
+    <div id="game-over-screen" class="hidden">
+      <div class="modal">
+        <h2 id="game-over-text">Game Over</h2>
+        <p id="winner-text"></p>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+
 </html>
