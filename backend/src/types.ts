@@ -24,6 +24,8 @@ export interface Player {
   socket: WebSocket;
   hand: Card[];
   connected: boolean;
+  unoPending: boolean; // true when player has 1 card and must declare UNO
+  unoDeclared: boolean; // true when player has declared UNO
 }
 
 // Room types
@@ -45,13 +47,18 @@ export interface GameState {
   currentTurn: string;
   direction: number;
   topCard: Card | null;
-  players: Array<{ id: string; cardCount: number }>;
+  players: Array<{
+    id: string;
+    cardCount: number;
+    unoPending: boolean;
+    unoDeclared: boolean;
+  }>;
   hand: Card[]; // Only filled for the receiving player
 }
 
 // WebSocket message types
 export interface WebSocketMessage {
-  type: "PLAY_CARD" | "DRAW_CARD" | "SAY_UNO" | "PING";
+  type: "PLAY_CARD" | "DRAW_CARD" | "SAY_UNO" | "CATCH_UNO" | "PING";
   payload: Record<string, unknown>;
 }
 
@@ -63,6 +70,8 @@ export interface ServerMessage {
     | "GAME_STATE"
     | "INVALID_MOVE"
     | "GAME_OVER"
+    | "UNO_DECLARED"
+    | "UNO_CAUGHT"
     | "PONG";
   payload: Record<string, unknown>;
 }

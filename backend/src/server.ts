@@ -7,6 +7,8 @@ import {
   playCard,
   drawCardFromDeck,
   getGameWinner,
+  sayUNO,
+  catchUNO,
 } from "./game/engine.ts";
 
 interface ClientContext {
@@ -70,6 +72,8 @@ function serializeGameState(roomId: string, playerId: string): ServerMessage {
     players: room.players.map((p) => ({
       id: p.id,
       cardCount: p.hand.length,
+      unoPending: p.unoPending,
+      unoDeclared: p.unoDeclared,
     })),
     hand: player?.hand || [],
   };
@@ -121,6 +125,8 @@ const handler = async (req: Request): Promise<Response> => {
         socket,
         hand: [],
         connected: true,
+        unoPending: false,
+        unoDeclared: false,
       };
 
       // Find or create room
@@ -266,6 +272,71 @@ const handler = async (req: Request): Promise<Response> => {
               payload: {},
             };
             sendToPlayer(playerId, pongMsg);
+            break;
+          }
+
+          case "SAY_UNO": {
+            const result = sayUNO(room, playerId);
+
+            if (!result.success) {
+              const errorMsg: ServerMessage = {
+                type: "INVALID_MOVE",
+                payload: { reason: result.error },
+              };
+              sendToPlayer(playerId, errorMsg);
+            } else {
+              // Broadcast UNO_DECLARED to all players
+              const unoDeclaredMsg: ServerMessage = {
+                type: "UNO_DECLARED",
+                payload: { playerId },
+              };
+              broadcastToRoom(room.id, unoDeclaredMsg);
+
+              // Broadcast updated game state
+              broadcastGameState(room.id);
+            }
+            break;
+          }
+
+          case "CATCH_UNO": {
+            const targetPlayerId = msg.payload.targetPlayerId as string;
+            const result = catchUNO(room, playerId, targetPlayerId);
+
+            if (!result.success) {
+              const errorMsg: ServerMessage = {
+                type: "INVALID_MOVE",
+                payload: { reason: result.error },
+              };
+              sendToPlayer(playerId, errorMsg);
+            } else {
+              // Broadcast UNO_CAUGHT to all players
+              const unoCaughtMsg: ServerMessage = {
+                type: "UNO_CAUGHT",
+                payload: { targetPlayerId, penaltyCards: 3 },
+              };
+              broadcastToRoom(room.id, unoCaughtMsg);
+
+              // Broadcast updated game state
+              broadcastGameState(room.id);
+
+              // Check for winner
+              const winner = getGameWinner(room);
+              if (winner) {
+                const gameOverMsg: ServerMessage = {
+                  type: "GAME_OVER",
+                  payload: { winnerId: winner },
+                };
+                broadcastToRoom(room.id, gameOverMsg);
+
+                // Schedule room destruction after 30 seconds
+                setTimeout(() => {
+                  roomManager.destroyRoom(room.id);
+                  console.log(
+                    `[${new Date().toISOString()}] Room ${room.id} destroyed after game completion`,
+                  );
+                }, 30000);
+              }
+            }
             break;
           }
 

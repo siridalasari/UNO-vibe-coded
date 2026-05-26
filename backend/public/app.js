@@ -31,6 +31,8 @@ const topCardEl = document.getElementById("top-card");
 const handContainer = document.getElementById("hand-container");
 const messagesContainer = document.getElementById("messages-container");
 const drawButton = document.getElementById("draw-button");
+const unoButton = document.getElementById("uno-button");
+const catchButton = document.getElementById("catch-button");
 const opponentId = document.getElementById("opponent-id");
 const opponentCardCount = document.getElementById("opponent-card-count");
 
@@ -113,6 +115,14 @@ function handleMessage(msg) {
 
     case "GAME_OVER":
       handleGameOver(msg.payload);
+      break;
+
+    case "UNO_DECLARED":
+      handleUnoDeclared(msg.payload);
+      break;
+
+    case "UNO_CAUGHT":
+      handleUnoCaught(msg.payload);
       break;
 
     case "PONG":
@@ -220,10 +230,40 @@ function handleGameOver(payload) {
 }
 
 /**
+ * Handle UNO_DECLARED message
+ */
+function handleUnoDeclared(payload) {
+  const playerId = payload.playerId;
+  if (playerId === state.playerId) {
+    addMessage("🎉 You declared UNO!", "info");
+  } else {
+    addMessage("⚠️ Opponent declared UNO!", "info");
+  }
+  render();
+}
+
+/**
+ * Handle UNO_CAUGHT message
+ */
+function handleUnoCaught(payload) {
+  const targetPlayerId = payload.targetPlayerId;
+  const penaltyCards = payload.penaltyCards;
+
+  if (targetPlayerId === state.playerId) {
+    addMessage(`😱 You were caught! Draw ${penaltyCards} penalty cards!`, "error");
+  } else {
+    addMessage(`🎯 You caught the opponent! They draw ${penaltyCards} cards!`, "success");
+  }
+  render();
+}
+
+/**
  * Disable all game controls
  */
 function disableGameControls() {
   drawButton.disabled = true;
+  unoButton.disabled = true;
+  catchButton.disabled = true;
   const cards = handContainer.querySelectorAll(".playable-card");
   cards.forEach((card) => {
     card.classList.add("disabled");
@@ -265,6 +305,8 @@ function render() {
   renderHand();
   renderTurnIndicator();
   updateDrawButton();
+  updateUNOButton();
+  updateCatchButton();
 }
 
 /**
@@ -340,6 +382,34 @@ function handleDrawButtonClick() {
 }
 
 /**
+ * Handle UNO button click
+ */
+function handleSayUNOClick() {
+  if (state.currentTurn !== state.playerId || state.gameOver) {
+    addMessage("❌ Not your turn or game is over", "error");
+    return;
+  }
+
+  sendMessage("SAY_UNO", {});
+  unoButton.disabled = true;
+}
+
+/**
+ * Handle CATCH UNO button click
+ */
+function handleCatchUNOClick() {
+  // Find opponent
+  const opponent = state.players.find((p) => p.id !== state.playerId);
+  if (!opponent || !opponent.unoPending || opponent.unoDeclared) {
+    addMessage("❌ Cannot catch opponent", "error");
+    return;
+  }
+
+  sendMessage("CATCH_UNO", { targetPlayerId: opponent.id });
+  catchButton.disabled = true;
+}
+
+/**
  * Update draw button state
  */
 function updateDrawButton() {
@@ -348,51 +418,77 @@ function updateDrawButton() {
 }
 
 /**
- * Render turn indicator
+ * Update UNO button state
  */
-function renderTurnIndicator() {
-  if (!state.gameStarted) {
-    turnText.textContent = "Waiting for game start...";
-    return;
-  }
+function updateUNOButton() {
+  const player = state.players.find((p) => p.id === state.playerId);
+  const isYourTurn = state.currentTurn === state.playerId;
+  const handSize = state.hand.length;
 
-  if (state.gameOver) {
-    turnText.textContent = "Game Over";
-    return;
-  }
+  // Show UNO button if: it's your turn, you have 1 card, and you haven't declared UNO yet
+  if (player && handSize === 1 && player.unoPending && !player.unoDeclared && isYourTurn && !state.gameOver) {
+    /**
+     * Update CATCH button state
+     */
+    function updateCatchButton() {
+      const opponent = state.players.find((p) => p.id !== state.playerId);
 
-  if (state.currentTurn === state.playerId) {
-    turnText.textContent = "Your Turn ✨";
-    turnText.style.color = "white";
-  } else {
-    const opponentName = `Player ${state.currentTurn?.substring(0, 4)}`;
-    turnText.textContent = `${opponentName}'s Turn`;
-    turnText.style.color = "rgba(255,255,255,0.8)";
-  }
-}
+      // Show CATCH button if: opponent has 1 card, hasn't declared UNO, and it's your turn
+      if (opponent && opponent.cardCount === 1 && opponent.unoPending && !opponent.unoDeclared && state.currentTurn === state.playerId && !state.gameOver) {
+        catchButton.disabled = false;
+      } else {
+        catchButton.disabled = true;
+      }
+    }
 
-/**
- * Initialize the game
- */
-function init() {
-  console.log("Initializing game...");
+    /**
+     * Render turn indicator
+     */
+    function renderTurnIndicator() {
+      if (!state.gameStarted) {
+        turnText.textContent = "Waiting for game start...";
+        return;
+      }
 
-  // Set up event listeners
-  drawButton.addEventListener("click", handleDrawButtonClick);
+      if (state.gameOver) {
+        turnText.textContent = "Game Over";
+        return;
+      }
 
-  // Try to restore player ID from localStorage
-  const savedPlayerId = localStorage.getItem(PLAYER_ID_KEY);
-  const savedRoomId = localStorage.getItem(ROOM_ID_KEY);
+      if (state.currentTurn === state.playerId) {
+        turnText.textContent = "Your Turn ✨";
+        turnText.style.color = "white";
+      } else {
+        const opponentName = `Player ${state.currentTurn?.substring(0, 4)}`;
+        turnText.textContent = `${opponentName}'s Turn`;
+        turnText.style.color = "rgba(255,255,255,0.8)";
+      }
+    }
 
-  if (savedPlayerId) {
-    console.log("Restoring player from localStorage");
-    state.playerId = savedPlayerId;
-    state.roomId = savedRoomId;
-  }
+    /**
+     * Initialize the game
+     */
+    function init() {
+      console.log("Initializing game...");
 
-  // Connect to server
-  connect();
-}
+      // Set up event listeners
+      drawButton.addEventListener("click", handleDrawButtonClick);
+      unoButton.addEventListener("click", handleSayUNOClick);
+      catchButton.addEventListener("click", handleCatchUNOClick);
 
-// Start the game when DOM is ready
-document.addEventListener("DOMContentLoaded", init);
+      // Try to restore player ID from localStorage
+      const savedPlayerId = localStorage.getItem(PLAYER_ID_KEY);
+      const savedRoomId = localStorage.getItem(ROOM_ID_KEY);
+
+      if (savedPlayerId) {
+        console.log("Restoring player from localStorage");
+        state.playerId = savedPlayerId;
+        state.roomId = savedRoomId;
+      }
+
+      // Connect to server
+      connect();
+    }
+
+    // Start the game when DOM is ready
+    document.addEventListener("DOMContentLoaded", init);

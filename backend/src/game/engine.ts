@@ -11,6 +11,8 @@ import {
   getNextPlayerIndex,
   checkWinner,
   applyCardEffect,
+  isValidUNODeclare,
+  isValidCatch,
 } from "./rules.ts";
 
 /**
@@ -102,6 +104,15 @@ export function playCard(
   const { newDirection } = applyCardEffect(card, room.direction);
   room.direction = newDirection;
 
+  // Update UNO state based on new hand size
+  if (player.hand.length === 1) {
+    player.unoPending = true;
+    player.unoDeclared = false;
+  } else {
+    player.unoPending = false;
+    player.unoDeclared = false;
+  }
+
   // Advance turn
   const currentPlayerIndex = room.players.findIndex((p) => p.id === playerId);
   const nextPlayerIndex = getNextPlayerIndex(
@@ -158,6 +169,15 @@ export function drawCardFromDeck(
   room.discardPile = newDiscardPile;
   player.hand.push(card);
 
+  // Update UNO state based on new hand size
+  if (player.hand.length === 1) {
+    player.unoPending = true;
+    player.unoDeclared = false;
+  } else {
+    player.unoPending = false;
+    player.unoDeclared = false;
+  }
+
   // End turn (move to next player)
   const currentPlayerIndex = room.players.findIndex((p) => p.id === playerId);
   const nextPlayerIndex = getNextPlayerIndex(
@@ -176,4 +196,82 @@ export function drawCardFromDeck(
  */
 export function getGameWinner(room: Room): string | null {
   return checkWinner(new Map(room.players.map((p) => [p.id, p.hand])));
+}
+
+/**
+ * Player declares UNO
+ *
+ * Returns:
+ * - success: true if UNO was declared
+ * - error: error message if failed
+ */
+export function sayUNO(
+  room: Room,
+  playerId: string,
+): { success: boolean; error?: string } {
+  // Find player
+  const player = room.players.find((p) => p.id === playerId);
+  if (!player) {
+    return { success: false, error: "Player not found" };
+  }
+
+  // Check if player can declare UNO
+  if (!isValidUNODeclare(player.unoPending, player.unoDeclared)) {
+    return { success: false, error: "Cannot declare UNO" };
+  }
+
+  player.unoDeclared = true;
+  return { success: true };
+}
+
+/**
+ * Catch opponent's UNO violation (they had 1 card but didn't declare UNO)
+ *
+ * Returns:
+ * - success: true if catch was valid
+ * - error: error message if failed
+ */
+export function catchUNO(
+  room: Room,
+  catcherId: string,
+  targetPlayerId: string,
+): { success: boolean; error?: string } {
+  // Find target player
+  const targetPlayer = room.players.find((p) => p.id === targetPlayerId);
+  if (!targetPlayer) {
+    return { success: false, error: "Target player not found" };
+  }
+
+  // Check if target player has UNO pending (and hasn't declared)
+  if (!isValidCatch(targetPlayer.unoPending, targetPlayer.unoDeclared)) {
+    return { success: false, error: "Cannot catch this player" };
+  }
+
+  // Draw 3 cards from the deck for the target player
+  const cardsToAdd: Card[] = [];
+  let newDeck = [...room.deck];
+  let newDiscardPile = [...room.discardPile];
+
+  for (let i = 0; i < 3; i++) {
+    const {
+      card,
+      newDeck: updatedDeck,
+      newDiscardPile: updatedDiscardPile,
+    } = drawCard(newDeck, newDiscardPile);
+    if (card) {
+      cardsToAdd.push(card);
+      newDeck = updatedDeck;
+      newDiscardPile = updatedDiscardPile;
+    }
+  }
+
+  room.deck = newDeck;
+  room.discardPile = newDiscardPile;
+  targetPlayer.hand.push(...cardsToAdd);
+
+  // Clear UNO state
+  targetPlayer.unoPending = false;
+  targetPlayer.unoDeclared = false;
+
+  return { success: true };
 }

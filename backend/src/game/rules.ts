@@ -50,3 +50,25 @@ export function applyCardEffect(
   // MVP: No special effects
   return { newDirection: 1, skipNextTurn: false };
 }
+
+/**
+ * Check if a player can declare UNO
+ * Returns true if player has exactly 1 card and hasn't declared UNO yet
+ */
+export function isValidUNODeclare(
+  unoPending: boolean,
+  unoDeclared: boolean,
+): boolean {
+  return unoPending && !unoDeclared;
+}
+
+/**
+ * Check if a catch is valid
+ * Returns true if target player has 1 card but hasn't declared UNO
+ */
+export function isValidCatch(
+  targetUnoPending: boolean,
+  targetUnoDeclared: boolean,
+): boolean {
+  return targetUnoPending && !targetUnoDeclared;
+}
